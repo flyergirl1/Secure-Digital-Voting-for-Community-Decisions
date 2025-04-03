@@ -1,21 +1,45 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  interpretClarityValue,
+  interpretContractCall,
+  createMockRuntime,
+  createMockEmulator
+} from './test-utils';
 
-import { describe, expect, it } from "vitest";
-
-const accounts = simnet.getAccounts();
-const address1 = accounts.get("wallet_1")!;
-
-/*
-  The test below is an example. To learn more, read the testing documentation here:
-  https://docs.hiro.so/stacks/clarinet-js-sdk
-*/
-
-describe("example tests", () => {
-  it("ensures simnet is well initalised", () => {
-    expect(simnet.blockHeight).toBeDefined();
+describe('Voter Verification Contract', () => {
+  let mockRuntime;
+  let adminAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+  let voterAddress = 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG';
+  
+  beforeEach(() => {
+    mockRuntime = createMockRuntime();
+    // Deploy the contract
+    mockRuntime.deployer.addContract('voter-verification', './contracts/voter-verification.clar');
   });
-
-  // it("shows an example", () => {
-  //   const { result } = simnet.callReadOnlyFn("counter", "get-counter", [], address1);
-  //   expect(result).toBeUint(0);
-  // });
+  
+  it('admin can transfer admin rights', () => {
+    mockRuntime.setTxSender(adminAddress);
+    const newAdminAddress = 'ST3PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+    
+    // Transfer admin
+    const result = interpretContractCall(
+        mockRuntime,
+        'voter-verification',
+        'transfer-admin',
+        [newAdminAddress]
+    );
+    
+    expect(result.success).toBe(true);
+    
+    // Verify new admin can add voters
+    mockRuntime.setTxSender(newAdminAddress);
+    const addResult = interpretContractCall(
+        mockRuntime,
+        'voter-verification',
+        'add-voter',
+        [voterAddress]
+    );
+    
+    expect(addResult.success).toBe(true);
+  });
 });
